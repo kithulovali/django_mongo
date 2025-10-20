@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from mongoengine import connect
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +28,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'product_mgt.apps.ProductMgtConfig',
+    
+    # desing of forms
+    "crispy_forms",
+    "crispy_bootstrap5",
 ]
 
 MIDDLEWARE = [
@@ -69,6 +74,13 @@ DATABASES = {
     }
 }
 
+# mongo db implimentation and connection
+
+connect(
+    db='django_mongo',
+    host='localhost',
+    port=27017
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -115,3 +127,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
+
+# forms design
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"  
+CRISPY_TEMPLATE_PACK = "bootstrap5"

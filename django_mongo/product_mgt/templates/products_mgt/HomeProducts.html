@@ -1,11 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>hello world</h1>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h2>Welcome, {{ user.username }}!</h2>
+
+{% if user.is_superuser %}
+<p>Here’s your dashboard or product list.</p>
+<a href="{% url 'add_product' %}" class="btn btn-primary">Add Product</a>
+<a href="{% url 'list_products' %}" class="btn btn-secondary">View Products</a>
+{% endif %}
+
+{% endblock %}
