@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+<h2>My Subscriptions</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sub in subscriptions %}
+        <tr>
+            <td>{{ sub.product.name }}</td>
+            <td>{{ sub.status }}</td>
+            <td>
+                {% if sub.status == "pending" %}
+                <form action="{% url 'unsubscribe_product' sub.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit">Unsubscribe</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

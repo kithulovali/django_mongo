@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>All Products</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+            <td>UGX {{ product.price }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>
+                <a href="{% url 'place_order' product.id %}">Order</a> |
+                <a href="{% url 'subscribe_product' product.id %}">Subscribe</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

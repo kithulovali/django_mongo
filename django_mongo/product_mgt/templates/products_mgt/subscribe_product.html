@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Subscribe {{ product.name }}{% endblock %}
+
+{% block content %}
+<h2>Subscribe to: {{ product.name }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success mt-3">Subscribe</button>
+</form>
+{% endblock %}
