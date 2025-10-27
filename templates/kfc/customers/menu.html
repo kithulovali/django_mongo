@@ -1,0 +1,45 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="kfc-brand m-0">Menu</h1>
+  <form class="row g-2" method="get">
+    <div class="col-12 col-md"><input class="form-control" name="q" placeholder="Search dishes" value="{{ query }}"></div>
+    <div class="col-6 col-md-auto">
+      <select class="form-select" name="category">
+        <option value="">All</option>
+        {% for c in categories %}
+          <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-auto"><button class="btn btn-kfc w-100">Filter</button></div>
+  </form>
+</div>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+  {% for p in products %}
+  <div class="col">
+    <div class="card h-100 prod-card">
+      <img src="/image/{{ p.id }}/" class="prod-img" onerror="this.src='https://via.placeholder.com/600x380?text=Food'" alt="{{ p.name }}">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <h5 class="card-title m-0">{{ p.name }}</h5>
+          <span class="chip">{{ p.category|title }}</span>
+        </div>
+        <p class="text-muted small mb-2">{{ p.description|default:'Delicious item' }}</p>
+        <div class="d-flex align-items-center justify-content-between mt-auto">
+          <div class="prod-price">${{ p.price|floatformat:2 }}</div>
+          <form method="post" action="/cart/add/{{ p.id }}/" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <input type="number" name="quantity" value="1" min="1" class="form-control" style="width:90px">
+            <button class="btn btn-kfc">Add</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+    <div class="empty w-100">No products yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}

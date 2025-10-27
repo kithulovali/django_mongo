@@ -1,0 +1,29 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Products</h1>
+<p><a class="btn btn-kfc" href="/kfc-admin/products/upload/">Upload Product</a></p>
+<table class="table table-hover">
+  <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Available</th><th style="width:180px">Action</th></tr></thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td style="width:100px"><img src="/image/{{ p.id }}/" class="img-fluid" onerror="this.src='https://via.placeholder.com/100x60?text=KFC'"></td>
+      <td>{{ p.name }}</td>
+      <td>{{ p.category|title }}</td>
+      <td>${{ p.price|floatformat:2 }}</td>
+      <td>{{ p.stock_quantity }}</td>
+      <td>{{ p.is_available }}</td>
+      <td class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-primary" href="/kfc-admin/products/{{ p.id }}/edit/">Edit</a>
+        <form method="post" action="/kfc-admin/products/{{ p.id }}/delete/" onsubmit="return confirm('Delete {{ p.name }}?')">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" class="text-center">No products yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

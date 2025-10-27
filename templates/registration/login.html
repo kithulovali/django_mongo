@@ -1,0 +1,14 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Sign in</h1>
+<form method="post" class="card p-3" action="{% url 'login' %}">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="hidden" name="next" value="{{ next|default:'/kfc-admin/dashboard/' }}">
+  <div class="d-flex gap-2">
+    <button class="btn btn-kfc">Login</button>
+    <a class="btn btn-outline-secondary" href="/">Cancel</a>
+    <a class="btn btn-outline-primary" href="{% url 'signup' %}">Create account</a>
+  </div>
+</form>
+{% endblock %}

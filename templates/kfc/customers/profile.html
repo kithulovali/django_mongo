@@ -1,0 +1,50 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">My Profile</h1>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      {% if customer and customer.avatar %}
+        <img src="/avatar/{{ customer.id }}/" class="img-fluid rounded" alt="Avatar">
+      {% else %}
+        <img src="https://via.placeholder.com/240x240?text=Avatar" class="img-fluid rounded" alt="Avatar">
+      {% endif %}
+      <div class="mt-2">{{ request.user.username }}</div>
+      <div class="text-muted small">{{ request.user.email }}</div>
+      <div class="d-grid gap-2 mt-3">
+        <a class="btn btn-light" href="/orders/mine/">My Orders</a>
+      </div>
+
+      
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="small text-muted">Completed</div><div class="h3">{{ completed_count }}</div></div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="small text-muted">In Progress</div><div class="h3">{{ in_progress_count }}</div></div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center"><div class="card-body"><div class="small text-muted">Total Spent</div><div class="h3">${{ total_spent|floatformat:2 }}</div></div></div>
+      </div>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="card p-3">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Phone</label>
+        {{ form.phone }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Avatar</label>
+        {{ form.avatar }}
+      </div>
+      <div>
+        <button class="btn btn-kfc">Save</button>
+      </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

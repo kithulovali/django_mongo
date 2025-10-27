@@ -1,0 +1,16 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Admin Dashboard</h1>
+<div class="row g-3">
+  <div class="col-md-3"><div class="card text-center"><div class="card-body"><div class="h6">Total Orders</div><div class="display-6">{{ total_orders }}</div></div></div></div>
+  <div class="col-md-3"><div class="card text-center"><div class="card-body"><div class="h6">Completed</div><div class="display-6">{{ completed }}</div></div></div></div>
+  <div class="col-md-3"><div class="card text-center"><div class="card-body"><div class="h6">Pending</div><div class="display-6">{{ pending }}</div></div></div></div>
+  <div class="col-md-3"><div class="card text-center"><div class="card-body"><div class="h6">Revenue</div><div class="display-6">${{ revenue|floatformat:2 }}</div></div></div></div>
+</div>
+<hr>
+<div class="d-flex gap-2">
+  <a class="btn btn-kfc" href="/kfc-admin/products/">Products</a>
+  <a class="btn btn-kfc" href="/kfc-admin/orders/">Orders</a>
+  <a class="btn btn-kfc" href="/kfc-admin/analytics/">Analytics</a>
+</div>
+{% endblock %}

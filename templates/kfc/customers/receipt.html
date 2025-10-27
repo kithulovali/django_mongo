@@ -1,0 +1,134 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="kfc-brand m-0">KFC Receipt</h1>
+  <button class="btn btn-kfc" onclick="window.print()">Print</button>
+  </div>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap">
+      <div>
+        <div class="h5">Receipt : {{ receipt.receipt_number }}</div>
+        <div class="text-muted small">Order   : {{ order.order_number }} • {{ order.created_at }}</div>
+        <div class="mt-2">
+          <div class="timeline align-items-center" id="statusTimeline">
+            <div class="dot" data-step="pending"></div>
+            <div class="bar"></div>
+            <div class="dot" data-step="confirmed"></div>
+            <div class="bar"></div>
+            <div class="dot" data-step="preparing"></div>
+            <div class="bar"></div>
+            <div class="dot" data-step="ready"></div>
+            <div class="bar"></div>
+            <div class="dot" data-step="completed"></div>
+          </div>
+          <div class="mt-2">
+            <span id="statusBadge" class="badge {% if order.status == 'completed' %}bg-success{% elif order.status == 'pending' %}bg-secondary{% elif order.status == 'cancelled' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ order.status|title }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="text-end">
+        <div class="fw-bold">Total</div>
+        <div class="display-6">${{ order.total_amount|floatformat:2 }}</div>
+      </div>
+    </div>
+    <hr>
+    <h6 class="mb-2">Items</h6>
+    <table class="table table-sm align-middle">
+      <thead><tr><th>Item</th><th class="text-center" style="width:120px">Qty</th><th class="text-end" style="width:140px">Price</th></tr></thead>
+      <tbody>
+        {% for i in order.items %}
+        <tr>
+          <td>{{ i.name }}</td>
+          <td class="text-center">{{ i.quantity }}</td>
+          <td class="text-end">${{ i.price|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="mt-3">
+      <div class="fw-bold mb-2">KFC Message</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted">A note from us</div>
+            <button class="btn btn-sm btn-outline-accent" id="copyMsgBtn">Copy</button>
+          </div>
+          <div id="kfcMsg" style="white-space:pre-wrap">{{ receipt.receipt_data.text }}</div>
+        </div>
+      </div>
+    </div>
+    {% if order.gemini_analysis %}
+    <div class="mt-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0">AI Insights</h6>
+            <button class="btn btn-sm btn-outline-accent" id="copyInsightsBtn">Copy</button>
+          </div>
+          <div id="insightsText" style="white-space:pre-wrap">{{ order.gemini_analysis }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="mt-3">
+      <div class="fw-bold mb-2">Customer</div>
+      <div>{{ customer_name_display }}</div>
+      {% if customer_email_display %}<div class="text-muted small">{{ customer_email_display }}</div>{% endif %}
+      {% if customer_phone_display %}<div class="text-muted small">Phone: {{ customer_phone_display }}</div>{% endif %}
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="/">Back to Menu</a>
+      <a class="btn btn-outline-primary" href="/orders/mine/">My Orders</a>
+    </div>
+  </div>
+</div>
+<script>
+  (function(){
+    // Copy + toggle for KFC Message
+    const msg = document.getElementById('kfcMsg');
+    const toggleMsg = document.getElementById('toggleMsg');
+    const copyMsgBtn = document.getElementById('copyMsgBtn');
+    if (msg && toggleMsg && copyMsgBtn){
+      let expanded = true; const clamp=()=>{msg.style.maxHeight=expanded?'':'8rem'; msg.style.overflow=expanded?'visible':'hidden'; toggleMsg.textContent=expanded?'Show less':'Show more';};
+      clamp();
+      toggleMsg.addEventListener('click', e=>{e.preventDefault(); expanded=!expanded; clamp();});
+      copyMsgBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(msg.textContent); copyMsgBtn.textContent='Copied'; setTimeout(()=>copyMsgBtn.textContent='Copy', 1200);}catch(e){} });
+    }
+
+    // Copy + toggle for AI Insights
+    const insights = document.getElementById('insightsText');
+    const toggleInsights = document.getElementById('toggleInsights');
+    const copyInsightsBtn = document.getElementById('copyInsightsBtn');
+    if (insights && toggleInsights && copyInsightsBtn){
+      let expanded = true; const clamp2=()=>{insights.style.maxHeight=expanded?'':'8rem'; insights.style.overflow=expanded?'visible':'hidden'; toggleInsights.textContent=expanded?'Show less':'Show more';};
+      clamp2();
+      toggleInsights.addEventListener('click', e=>{e.preventDefault(); expanded=!expanded; clamp2();});
+      copyInsightsBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(insights.textContent); copyInsightsBtn.textContent='Copied'; setTimeout(()=>copyInsightsBtn.textContent='Copy', 1200);}catch(e){} });
+    }
+
+    // Status polling and timeline coloring
+    const orderNumber = '{{ order.order_number }}';
+    const badge = document.getElementById('statusBadge');
+    const timeline = document.getElementById('statusTimeline');
+    const steps = ['pending','confirmed','preparing','ready','completed'];
+    function paint(status){
+      if(!timeline) return;
+      const dots = timeline.querySelectorAll('.dot');
+      const bars = timeline.querySelectorAll('.bar');
+      const idx = Math.max(0, steps.indexOf(status));
+      dots.forEach((d,i)=>{ d.classList.toggle('active', i<=idx); });
+      bars.forEach((b,i)=>{ b.classList.toggle('active', i<idx); });
+      if(badge){ badge.textContent = status.charAt(0).toUpperCase()+status.slice(1); }
+    }
+    paint('{{ order.status }}');
+    let timer = null;
+    function poll(){
+      fetch('/order/status/'+orderNumber+'/').then(r=>r.json()).then(data=>{
+        if(data && data.status){ paint(data.status); if(data.status==='completed' || data.status==='cancelled'){ clearInterval(timer); } }
+      }).catch(()=>{});
+    }
+    timer = setInterval(poll, 4000);
+  })();
+</script>
+{% endblock %}

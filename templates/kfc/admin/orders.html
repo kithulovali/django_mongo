@@ -1,0 +1,46 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Orders</h1>
+<form method="post" class="mb-3 d-flex gap-2">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="backfill_names">
+  <button class="btn btn-outline-accent btn-sm">Backfill Names</button>
+  <span class="text-muted small">Attempts to set customer usernames using real emails or matching phone numbers.</span>
+  </form>
+<table class="table table-striped">
+  <thead><tr><th>Order #</th><th>Customer</th><th>Status</th><th>Total</th><th>Placed</th><th>Action</th></tr></thead>
+  <tbody>
+    {% for o in orders %}
+    <tr>
+      <td>{{ o.order_number }}</td>
+      <td>
+        {% if o.display_name %}
+          {{ o.display_name }}
+        {% elif o.customer.name %}
+          {{ o.customer.name }}
+        {% else %}
+          Customer
+        {% endif %}
+      </td>
+      <td>{{ o.status }}</td>
+      <td>${{ o.total_amount|floatformat:2 }}</td>
+      <td>{{ o.created_at }}</td>
+      <td>
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <input type="hidden" name="order_id" value="{{ o.id }}">
+          <select name="status" class="form-select form-select-sm" style="max-width:150px">
+            {% for s in status_list %}
+              <option value="{{ s }}" {% if s == o.status %}selected{% endif %}>{{ s|title }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-kfc">Update</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="text-center">No orders yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

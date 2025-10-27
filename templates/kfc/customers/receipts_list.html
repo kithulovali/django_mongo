@@ -1,0 +1,35 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">My Receipts</h1>
+{% if receipts %}
+<table class="table table-striped align-middle">
+  <thead>
+    <tr>
+      <th>Receipt #</th>
+      <th>Order #</th>
+      <th>Date</th>
+      <th class="text-end">Total</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in receipts %}
+    <tr>
+      <td>{{ r.receipt_number }}</td>
+      <td>{{ r.order.order_number }}</td>
+      <td>{{ r.generated_at }}</td>
+      <td class="text-end">${{ r.order.total_amount|floatformat:2 }}</td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-kfc" href="/receipt/{{ r.order.order_number }}/">View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No receipts yet.</p>
+{% endif %}
+<div class="mt-3">
+  <a class="btn btn-outline-secondary" href="/">Back to Menu</a>
+</div>
+{% endblock %}

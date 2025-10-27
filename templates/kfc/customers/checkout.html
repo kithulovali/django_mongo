@@ -1,0 +1,94 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="kfc-brand m-0">Checkout</h1>
+  <a class="btn btn-outline-accent" href="/cart/">Back to cart</a>
+</div>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" class="card p-3">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Detected Delivery Location</label>
+        <input id="detected_location" class="form-control" type="text" placeholder="Detecting location..." readonly>
+        {{ form.address }}
+        <div class="form-text">We only store your location for this order. You can proceed if detection fails.</div>
+      </div>
+      <div id="map" class="mb-3 d-none" style="height: 250px; border: 1px solid #ddd; border-radius: 10px;"></div>
+      <div class="mb-3">
+        <label for="id_phone" class="form-label">Phone number</label>
+        {{ form.phone }}
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-kfc">Place Order</button>
+        <a class="btn btn-outline-accent" href="/">Continue shopping</a>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="card p-3 sticky-summary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="m-0">Order Summary</h5>
+        <span class="badge bg-success-subtle text-success">{{ items|length }} items</span>
+      </div>
+      <hr>
+      <ul class="list-group list-group-flush">
+        {% for i in items %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div class="text-truncate" style="max-width: 70%">{{ i.name }} × {{ i.quantity }}</div>
+          <div>${{ i.price|floatformat:2 }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      <hr>
+      <div class="d-flex justify-content-between fw-bold">
+        <span>Total</span>
+        <span class="prod-price m-0">${{ total|floatformat:2 }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script>
+  (function(){
+    const hiddenAddr = document.getElementById('id_address');
+    const display = document.getElementById('detected_location');
+    const mapDiv = document.getElementById('map');
+    if (!navigator.geolocation) {
+      display.value = 'Geolocation not supported';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      const text = `${lat}, ${lng}`;
+      display.value = text;
+      if (hiddenAddr) hiddenAddr.value = text;
+      // Load Leaflet script and show map
+      function initMap(){
+        if (!mapDiv) return;
+        mapDiv.classList.remove('d-none');
+        if (!window._kfcMap){
+          window._kfcMap = L.map('map');
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(window._kfcMap);
+        }
+        const latNum = parseFloat(lat), lngNum = parseFloat(lng);
+        window._kfcMap.setView([latNum, lngNum], 16);
+        if (window._kfcMarker){ window._kfcMap.removeLayer(window._kfcMarker); }
+        window._kfcMarker = L.marker([latNum, lngNum]).addTo(window._kfcMap).bindPopup('Your location');
+      }
+      if (typeof L === 'undefined'){
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.crossOrigin = '';
+        s.onload = initMap;
+        document.body.appendChild(s);
+      } else {
+        initMap();
+      }
+    }, function(err){
+      display.value = 'Unable to get location (' + err.code + ')';
+    }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+  })();
+</script>
+{% endblock %}

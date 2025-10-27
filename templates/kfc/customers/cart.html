@@ -1,0 +1,28 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Your Cart</h1>
+<form method="post" action="/cart/update/">
+  {% csrf_token %}
+  <table class="table">
+    <thead><tr><th>Item</th><th>Price</th><th style="width:140px">Qty</th><th class="text-end">Subtotal</th></tr></thead>
+    <tbody>
+      {% for i in items %}
+      <tr>
+        <td>{{ i.name }}</td>
+        <td>${{ i.price|floatformat:2 }}</td>
+        <td><input class="form-control" type="number" name="qty_{{ i.product_id }}" value="{{ i.quantity }}" min="0"></td>
+        <td class="text-end">${{ i.subtotal|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="d-flex justify-content-between align-items-center">
+    <a href="/" class="btn btn-outline-secondary">Continue Shopping</a>
+    <div class="d-flex align-items-center gap-3">
+      <strong class="me-2">Total: ${{ total|floatformat:2 }}</strong>
+      <button class="btn btn-outline-danger" name="clear" value="1" formaction="/cart/update/" formmethod="post" onclick="document.querySelectorAll('input[type=number]').forEach(i=>i.value=0)">Clear</button>
+      <a href="/checkout/" class="btn btn-kfc">Checkout</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

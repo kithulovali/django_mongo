@@ -1,0 +1,24 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Order History</h1>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-8"><input class="form-control" name="email" placeholder="Enter your email" value="{{ email }}"></div>
+  <div class="col-md-4"><button class="btn btn-kfc w-100">Find Orders</button></div>
+</form>
+<table class="table table-striped">
+  <thead><tr><th>Order #</th><th>Date</th><th>Status</th><th>Total</th><th></th></tr></thead>
+  <tbody>
+    {% for o in orders %}
+    <tr>
+      <td>{{ o.order_number }}</td>
+      <td>{{ o.created_at }}</td>
+      <td>{{ o.status|title }}</td>
+      <td>${{ o.total_amount|floatformat:2 }}</td>
+      <td><a class="btn btn-sm btn-outline-primary" href="/receipt/{{ o.order_number }}/">Receipt</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="text-center">No orders found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

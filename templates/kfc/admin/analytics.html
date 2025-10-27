@@ -1,0 +1,15 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Analytics</h1>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <select class="form-select" name="period">
+      {% for p in period_list %}
+        <option value="{{ p }}" {% if period == p %}selected{% endif %}>{{ p|title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-kfc w-100">Generate</button></div>
+</form>
+<pre class="bg-light p-3 border" style="white-space:pre-wrap">{{ report }}</pre>
+{% endblock %}

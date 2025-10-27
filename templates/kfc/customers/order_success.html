@@ -1,0 +1,38 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Thank you!</h1>
+<p>Your order <strong>{{ order.order_number }}</strong> was placed.</p>
+<p>
+  <a class="btn btn-kfc" href="/receipt/{{ order.order_number }}/">View Receipt</a>
+  <a class="btn btn-outline-secondary" href="/">Back to Menu</a>
+</p>
+{% if order.gemini_analysis %}
+<hr>
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="m-0">AI Insights</h5>
+      <button class="btn btn-sm btn-outline-accent" id="copyInsightsBtn">Copy</button>
+    </div>
+    <div id="insightsText" class="text-prewrap" style="white-space:pre-wrap">{{ order.gemini_analysis }}</div>
+    <div class="mt-2">
+    </div>
+  </div>
+  <script>
+    (function(){
+      const el = document.getElementById('insightsText');
+      const toggle = document.getElementById('toggleInsights');
+      const btn = document.getElementById('copyInsightsBtn');
+      let expanded = true;
+      function clamp(){ el.style.maxHeight = expanded ? '' : '6.5rem'; el.style.overflow = expanded ? 'visible' : 'hidden';
+        toggle.textContent = expanded ? 'Show less' : 'Show more'; }
+      clamp();
+      toggle.addEventListener('click', function(e){ e.preventDefault(); expanded = !expanded; clamp(); });
+      btn.addEventListener('click', async function(){
+        try { await navigator.clipboard.writeText(el.textContent); btn.textContent = 'Copied'; setTimeout(()=>btn.textContent='Copy', 1200); } catch(e) {}
+      });
+    })();
+  </script>
+</div>
+{% endif %}
+{% endblock %}

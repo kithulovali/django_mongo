@@ -1,0 +1,12 @@
+{% extends 'kfc/base.html' %}
+{% block content %}
+<h1 class="kfc-brand">Suggest a New Product</h1>
+<form method="post" enctype="multipart/form-data" class="card p-3">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="d-flex gap-2">
+    <button class="btn btn-kfc">Submit Suggestion</button>
+    <a class="btn btn-outline-secondary" href="/">Cancel</a>
+  </div>
+</form>
+{% endblock %}
