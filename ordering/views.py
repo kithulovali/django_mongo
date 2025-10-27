@@ -6,6 +6,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from bson import ObjectId
 from mongoengine.queryset.visitor import Q
+import json
+import re
 
 from .models import Product, Customer, Order, Receipt, Suggestion
 from .forms import CheckoutForm, ProductForm, ProfileForm, SuggestionForm
@@ -660,3 +662,162 @@ def admin_analytics(request):
     report = ai.generate_kfc_business_report(sales_data, period=period)
     period_list = ['daily', 'weekly', 'monthly', 'quarterly']
     return render(request, 'kfc/admin/analytics.html', {'report': report, 'period_list': period_list, 'period': period})
+
+
+def chat_page(request):
+    return render(request, 'kfc/customers/chat.html')
+
+
+@require_POST
+def chat_api(request):
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        payload = {}
+    message = (payload.get('message') or '').strip()
+    history = payload.get('history') or []
+    if not message:
+        return JsonResponse({'error': 'empty_message'}, status=400)
+    # Build live catalog of ALL products and label availability/out-of-stock
+    try:
+        products_qs = Product.objects()
+    except Exception:
+        products_qs = Product.objects()
+    catalog = []
+    product_index = []  # (alias, product_obj)
+    for p in products_qs:
+        try:
+            in_stock = None
+            try:
+                in_stock = (p.stock_quantity is None) or (int(p.stock_quantity) > 0)
+            except Exception:
+                in_stock = None
+            catalog.append({
+                'name': p.name,
+                'category': getattr(p, 'category', ''),
+                'price': float(p.price),
+                'available': bool(getattr(p, 'is_available', True)),
+                'in_stock': bool(in_stock) if in_stock is not None else True,
+            })
+            # Build simple aliases: full name, lowercase, and naive plural
+            name = (p.name or '').strip()
+            if name:
+                base = name.lower()
+                aliases = {base}
+                # add naive plural forms for last word
+                parts = base.split()
+                if parts:
+                    last = parts[-1]
+                    if not last.endswith('s'):
+                        aliases.add(base + 's')
+                for a in aliases:
+                    product_index.append((a, p))
+        except Exception:
+            pass
+    # Try parse ordering intent and add to cart
+    def parse_order(msg):
+        text = (msg or '').lower()
+        intent_words = ['order', 'buy', 'add', 'want', 'get', 'take']
+        looks_like_intent = any(w in text for w in intent_words) or re.search(r'\b\d+\b', text)
+        if not looks_like_intent:
+            return []
+        # support small number words
+        num_words = {
+            'a': 1, 'an': 1, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
+            'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
+        }
+        items = []  # (product, qty)
+        used = set()
+        for alias, prod in product_index:
+            # pattern: "3 x alias" or "3 alias" or number word + alias
+            pat_num = rf"(\d+)\s*(?:x\s*)?{re.escape(alias)}\b"
+            m = re.search(pat_num, text)
+            qty = None
+            if m:
+                try:
+                    qty = int(m.group(1))
+                except Exception:
+                    qty = None
+            if qty is None:
+                # word numbers
+                for w, val in num_words.items():
+                    if re.search(rf"\b{w}\s+{re.escape(alias)}\b", text):
+                        qty = val
+                        break
+            if qty is None and alias in text:
+                qty = 1
+            if qty:
+                key = str(getattr(prod, 'id', ''))
+                if key not in used:
+                    items.append((prod, max(1, int(qty))))
+                    used.add(key)
+        return items
+
+    parsed = parse_order(message)
+    if parsed:
+        # Update session cart with stock checks (cap by available stock if tracked)
+        cart = _get_cart(request)
+        added_lines = []
+        total_add = 0.0
+        for prod, qty_req in parsed:
+            try:
+                stock = getattr(prod, 'stock_quantity', None)
+                pid = str(getattr(prod, 'id'))
+                current_qty = int(cart.get(pid, {}).get('quantity', 0))
+                if stock is not None:
+                    max_addable = max(0, int(stock) - current_qty)
+                    add_qty = min(qty_req, max_addable)
+                else:
+                    add_qty = qty_req
+                if add_qty <= 0:
+                    continue
+                item = cart.get(pid, {'name': prod.name, 'price': float(prod.price), 'quantity': 0})
+                item['quantity'] = int(item['quantity']) + add_qty
+                cart[pid] = item
+                line_total = float(item['price']) * add_qty
+                total_add += line_total
+                added_lines.append(f"{prod.name} x {add_qty} - ${line_total:.2f}")
+            except Exception:
+                pass
+        _save_cart(request, cart)
+        if added_lines:
+            summary = "\n".join(added_lines)
+            reply = (
+                f"Added to your cart:\n{summary}\n"
+                f"Subtotal added: ${total_add:.2f}. View cart: /cart/ or say more to add items."
+            )
+            return JsonResponse({'reply': reply})
+        # If parsing found items but nothing addable
+        return JsonResponse({'reply': "Those items seem out of stock right now. You can check /cart/ or ask about other items."})
+
+    # Checkout intent
+    text_lower = message.lower()
+    if re.search(r"\b(check\s*out|checkout|proceed|pay|place\s+order|finish\s+order|go\s+to\s+checkout)\b", text_lower):
+        cart = _get_cart(request)
+        if not cart:
+            return JsonResponse({'reply': 'Your cart is empty. Say an item to add, or visit /menu to pick products.'})
+        items = []
+        total = 0.0
+        for pid, it in cart.items():
+            try:
+                qty = int(it.get('quantity', 0))
+                price = float(it.get('price', 0))
+                if qty > 0 and price >= 0:
+                    items.append({'quantity': qty, 'price': price})
+                    total += price * qty
+            except Exception:
+                pass
+        try:
+            total = cart_total(items)
+        except Exception:
+            pass
+        reply = (
+            f"Great! Your current cart total is ${total:.2f}. "
+            f"Click here to complete your order: /checkout/"
+        )
+        return JsonResponse({'reply': reply})
+
+    # Otherwise, standard menu Q&A via Gemini
+    ai = KFCGeminiAI()
+    reply = ai.chat_about_menu(message, catalog=catalog, history=history)
+    return JsonResponse({'reply': reply})

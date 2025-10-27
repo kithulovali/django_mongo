@@ -19,6 +19,10 @@ urlpatterns = [
     path('avatar/<str:customer_id>/', views.customer_avatar, name='customer_avatar'),
     path('suggest/', views.suggest_product, name='suggest_product'),
 
+    # Chatbot
+    path('chat/', views.chat_page, name='chat_page'),
+    path('api/chat/', views.chat_api, name='chat_api'),
+
     # Admin
     path('kfc-admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('kfc-admin/products/', views.admin_products, name='admin_products'),

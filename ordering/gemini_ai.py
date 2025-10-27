@@ -146,3 +146,95 @@ class KFCGeminiAI:
         """
         result = self._safe_generate(prompt, "KFC Business Report: Data analysis unavailable.")
         return self._tidy(result, max_chars=900)
+
+    def chat_about_system(self, question, history=None):
+        """
+        Provide a general-purpose chatbot answer about this KFC ordering system.
+        History is a list of dicts like {"role": "user"|"assistant", "content": "..."}.
+        """
+        # Build a compact conversational context to keep prompts short and robust
+        sys_preamble = (
+            "You are a helpful assistant for a Django + MongoEngine KFC ordering web app. "
+            "Answer clearly in plain text. Be concise. If you lack real-time data or a feature, say so briefly."
+        )
+        convo = []
+        try:
+            for turn in (history or [])[-6:]:  # last few turns
+                role = turn.get('role', 'user')
+                content = (turn.get('content') or '').strip()
+                if content:
+                    convo.append(f"{role.capitalize()}: {content}")
+        except Exception:
+            pass
+        convo_text = "\n".join(convo)
+        prompt = f"""
+        {sys_preamble}
+
+        Conversation so far:
+        {convo_text}
+
+        User: {question}
+        Assistant: """
+        fallback = "I'm here to help with the KFC ordering system. Please rephrase your question."
+        result = self._safe_generate(prompt, fallback)
+        return self._tidy(result, max_chars=900)
+
+    def chat_about_menu(self, question, catalog, history=None):
+        """
+        Strictly answer about available products, their categories, and prices using the provided catalog.
+        catalog: list of dicts with keys: name, category, price (number)
+        """
+        sys_rules = (
+            "You are a friendly, concise KFC menu assistant. "
+            "Only answer about the provided products, categories, and prices. "
+            "Respond directly to the user's question first, in plain text, with a warm and polite tone. "
+            "If the user greets or is vague (e.g., 'hi', 'hello', 'yes', 'okay'), give a SHORT helpful overview: "
+            "- Mention main categories available. "
+            "- List 3–6 representative items with prices (picked from the catalog). "
+            "- End with ONE short follow-up question to narrow preference (e.g., category or price range). "
+            "Avoid repeated back-and-forth without giving information. "
+            "Do NOT discuss technical details or anything outside products/prices/availability. "
+            "Never invent items or prices—use exactly what's in the catalog."
+        )
+        # Build compact catalog text
+        try:
+            lines = []
+            for item in (catalog or []):
+                n = str(item.get('name', '')).strip()
+                c = str(item.get('category', '')).strip()
+                p = item.get('price')
+                try:
+                    ptxt = f"{float(p):.2f}"
+                except Exception:
+                    ptxt = str(p)
+                if n:
+                    lines.append(f"- {n} [{c}] - ${ptxt}")
+            catalog_text = "\n".join(lines)
+        except Exception:
+            catalog_text = ""
+
+        convo = []
+        try:
+            for turn in (history or [])[-6:]:
+                role = turn.get('role', 'user')
+                content = (turn.get('content') or '').strip()
+                if content:
+                    convo.append(f"{role.capitalize()}: {content}")
+        except Exception:
+            pass
+        convo_text = "\n".join(convo)
+
+        prompt = f"""
+        {sys_rules}
+
+        Catalog (available items):
+        {catalog_text}
+
+        Conversation so far:
+        {convo_text}
+
+        User: {question}
+        Assistant: """
+        fallback = "I can help with available KFC products and prices only. Please ask about items on the menu."
+        result = self._safe_generate(prompt, fallback)
+        return self._tidy(result, max_chars=700)

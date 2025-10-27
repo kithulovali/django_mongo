@@ -1,0 +1,88 @@
+{% extends 'kfc/base.html' %}
+{% load static %}
+{% block content %}
+<div class="row">
+  <div class="col-12 col-lg-8 mx-auto">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Ask the KFC Assistant</h5>
+        <a class="btn btn-sm btn-outline-accent" href="/">Back to menu</a>
+      </div>
+      <div id="chat-log" class="card-body" style="height: 420px; overflow-y: auto; white-space: pre-wrap;"></div>
+      <div class="card-footer bg-white">
+        <form id="chat-form" class="d-flex gap-2">
+          <input id="chat-input" type="text" class="form-control" placeholder="Type your question about the system..." autocomplete="off" required>
+          <button id="send-btn" class="btn btn-kfc" type="submit">Send</button>
+        </form>
+        <div id="chat-error" class="text-danger small mt-2" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const log = document.getElementById('chat-log');
+  const form = document.getElementById('chat-form');
+  const input = document.getElementById('chat-input');
+  const err = document.getElementById('chat-error');
+  const btn = document.getElementById('send-btn');
+  const history = [];
+
+  function append(role, text){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-3';
+    const who = document.createElement('div');
+    who.className = 'fw-semibold ' + (role === 'user' ? 'text-primary' : 'text-success');
+    who.textContent = role === 'user' ? 'You' : 'Assistant';
+    const bubble = document.createElement('div');
+    bubble.className = 'border rounded p-2';
+    bubble.textContent = text;
+    wrapper.appendChild(who);
+    wrapper.appendChild(bubble);
+    log.appendChild(wrapper);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const msg = (input.value || '').trim();
+    if(!msg) return;
+    err.style.display = 'none';
+    btn.disabled = true;
+    append('user', msg);
+    history.push({role:'user', content: msg});
+    input.value = '';
+    try {
+      const res = await fetch('/api/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken') || ''
+        },
+        body: JSON.stringify({ message: msg, history: history.slice(-6) })
+      });
+      if(!res.ok){
+        const data = await res.json().catch(()=>({error:'request_failed'}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const reply = (data && data.reply) ? data.reply : 'Sorry, I could not generate a reply.';
+      append('assistant', reply);
+      history.push({role:'assistant', content: reply});
+    } catch (e) {
+      err.textContent = e.message || 'Something went wrong.';
+      err.style.display = '';
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  });
+})();
+</script>
+{% endblock %}

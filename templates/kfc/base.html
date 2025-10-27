@@ -13,6 +13,7 @@
       <div class="container">
         <a class="navbar-brand" href="/">KFC</a>
         <div class="ms-auto d-flex align-items-center gap-2">
+          <a class="btn btn-sm btn-outline-accent" href="/chat/">Chat</a>
           <a class="btn btn-sm btn-outline-accent" href="/cart/">Cart</a>
           {% if user.is_authenticated and user.is_staff %}
             <a class="btn btn-sm btn-outline-accent" href="/kfc-admin/dashboard/">Admin</a>
@@ -31,6 +32,98 @@
     <main class="container my-4">
       {% block content %}{% endblock %}
     </main>
+    <!-- Floating Chat Button -->
+    <button id="chat-fab" type="button" class="btn btn-kfc shadow" data-bs-toggle="modal" data-bs-target="#quickChatModal" style="position: fixed; right: 20px; bottom: 20px; z-index: 1050;">
+      Chat
+    </button>
+
+    <!-- Quick Chat Modal -->
+    <div class="modal fade" id="quickChatModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-end modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">KFC Assistant</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="height: 320px; overflow-y: auto; white-space: pre-wrap;" id="quick-chat-log"></div>
+          <div class="modal-footer">
+            <form id="quick-chat-form" class="w-100 d-flex gap-2">
+              {% csrf_token %}
+              <input id="quick-chat-input" type="text" class="form-control form-control-sm" placeholder="Ask about the system..." autocomplete="off" required>
+              <button id="quick-send-btn" class="btn btn-kfc btn-sm" type="submit">Send</button>
+            </form>
+            <div id="quick-chat-error" class="text-danger small w-100 mt-1" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function(){
+      const log = document.getElementById('quick-chat-log');
+      const form = document.getElementById('quick-chat-form');
+      const input = document.getElementById('quick-chat-input');
+      const err = document.getElementById('quick-chat-error');
+      const btn = document.getElementById('quick-send-btn');
+      const history = [];
+
+      function append(role, text){
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-2';
+        const who = document.createElement('div');
+        who.className = 'fw-semibold ' + (role === 'user' ? 'text-primary' : 'text-success');
+        who.textContent = role === 'user' ? 'You' : 'Assistant';
+        const bubble = document.createElement('div');
+        bubble.className = 'border rounded p-2';
+        bubble.textContent = text;
+        wrapper.appendChild(who);
+        wrapper.appendChild(bubble);
+        log.appendChild(wrapper);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      form && form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        const msg = (input.value || '').trim();
+        if(!msg) return;
+        err.style.display = 'none';
+        btn.disabled = true;
+        append('user', msg);
+        history.push({role:'user', content: msg});
+        input.value = '';
+        try {
+          const res = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            },
+            body: JSON.stringify({ message: msg, history: history.slice(-6) })
+          });
+          if(!res.ok){
+            const data = await res.json().catch(()=>({error:'request_failed'}));
+            throw new Error(data.error || `HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          const reply = (data && data.reply) ? data.reply : 'Sorry, I could not generate a reply.';
+          append('assistant', reply);
+          history.push({role:'assistant', content: reply});
+        } catch (e) {
+          err.textContent = e.message || 'Something went wrong.';
+          err.style.display = '';
+        } finally {
+          btn.disabled = false;
+          input.focus();
+        }
+      });
+    })();
+    </script>
   </body>
 </html>
